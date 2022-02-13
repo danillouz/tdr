@@ -1,0 +1,2 @@
+# tdr
+Tiny DNS resolver.
