@@ -2,7 +2,7 @@ package dns
 
 import "testing"
 
-func TestPackUnpack(t *testing.T) {
+func TestHeaderPackUnpack(t *testing.T) {
 	msg := Header{
 		ID:      1,
 		QR:      1,

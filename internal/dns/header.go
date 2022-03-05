@@ -117,7 +117,7 @@ type Header struct {
 	ARCount uint16
 }
 
-// Pack encodes the DNS message header fields into binary format.
+// Pack packs the DNS message header fields into binary format.
 func (h *Header) Pack() ([]byte, error) {
 	// The header fields must be packed into 6 sections of 16 bits (big endian),
 	// where each section will be written into a single buffer.
@@ -171,8 +171,8 @@ func (h *Header) Pack() ([]byte, error) {
 	return buff.Bytes(), nil
 }
 
-// Unpack decodes the DNS message header field bytes (big-endian; network
-// order). It returns either the unpacked bytes count or an error.
+// Unpack unpacks the DNS message header field bytes (big-endian; network
+// order). It returns either the unpacked byte count or an error.
 func (h *Header) Unpack(msg []byte) (int, error) {
 	// The first 2 bytes contain the first section; ID.
 	//
@@ -188,12 +188,11 @@ func (h *Header) Unpack(msg []byte) (int, error) {
 	// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 	//
 	// To "query" the header's bit fields, for each bit field:
-	// - Right-shift the byte to the "right most" position, so only the queried
-	//   bit field remains.
-	// - Create a bit mask where all "left most" bits are "turned off", _except_
-	//   the bit(s) in the queried bit field (mask the length of the bit field).
-	// - AND the header's shifted byte value with the mask to get the bit
-	//   field value.
+	// - Right-shift to the "right most" position, so only the queried bit field
+	//   remains.
+	// - Create a mask where all "left most" bits are "turned off", _except_ the
+	//   bit(s) in the queried bit field (i.e. mask the length of the bit field).
+	// - AND the header's shifted value with the mask to get the bit field value.
 	h.QR = msg[2] >> 7 & queryByteMask(1)
 	h.OpCode = OpCode(msg[2] >> 3 & queryByteMask(4))
 	h.AA = msg[2] >> 2 & queryByteMask(1)
