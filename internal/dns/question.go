@@ -53,8 +53,6 @@ func (q *Question) Pack() ([]byte, error) {
 	//
 	// Per RFC 1035 this is not required for sending messages, but doing so will
 	// increase datagram capacity.
-	// Note that after compressing the domain name here, we also have to
-	// uncompress it in Unpack!
 	//
 	// See: https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.4
 
@@ -97,26 +95,17 @@ func (q *Question) Pack() ([]byte, error) {
 func (q *Question) Unpack(msg []byte) (int, error) {
 	off := 0
 
-	// To unpack the QName, read the domain name labels one by one. Each label
-	// will start with a length byte, followed by the actual label byte(s).
+	// To unpack QName, read the domain name labels one by one.
 	labels := []string{}
 	for {
-		// Grab the length byte of the QName label, so we know its label size.
-		lsize := int(msg[off])
-
-		// QName always terminates with a zero length byte.
+		lsize, label, offn := unpackNameLabel(msg, off)
 		if lsize == 0 {
+			// A zero length byte indicates we're done parsing labels.
 			off += 1
 			break
 		}
-
-		// The label byte(s) start after the length byte.
-		start := off + 1
-		label := string(msg[start : start+lsize])
 		labels = append(labels, label)
-
-		// Include the length byte to get the new offset.
-		off += 1 + lsize
+		off = offn
 	}
 	q.QName = strings.Join(labels, ".")
 
