@@ -1,5 +1,7 @@
 package dns
 
+import "strings"
+
 // Type represents a DNS resource record type.
 //
 // See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
@@ -69,13 +71,11 @@ const (
 	ClassIN
 )
 
-// RR represents a resource record.
-// The message answer, authority, and additional sections all share the same
-// format: a variable number of resource records, where the number of records
-// is specified in the corresponding count field in the message header.
-// Each resource record has the following format:
+// RR represents a resource record. The message answer, authority, and
+// additional sections all share the same format: a variable number of resource
+// records, where the number of records is specified in the corresponding count
+// field in the message header. Each resource record has the following format:
 //
-//                                 1  1  1  1  1  1
 //   0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
 // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 // |                                               |
@@ -116,4 +116,47 @@ type RR struct {
 	// RData describes the resource itself, where the format of this information
 	// varies depending on the TYPE and CLASS of the resource record.
 	RData []byte
+}
+
+// Unpack unpacks the DNS message resource record bytes (big-endian; network
+// order). It returns either the unpacked byte count or an error.
+func (r *RR) Unpack(msg []byte) (int, error) {
+	off := 0
+
+	// To unpack Name, read the domain name labels one by one.
+	labels := []string{}
+	for {
+		lsize, label, offn := unpackNameLabel(msg, off)
+		if lsize == 0 {
+			// A zero length byte indicates we're done parsing labels.
+			off += 1
+			break
+		}
+		labels = append(labels, label)
+		off = offn
+	}
+	r.Name = strings.Join(labels, ".")
+
+	// The remaining bytes contain the remaining sections; left-shift the first
+	// byte to the "left most" position, and OR it with the remaining byte(s) to
+	// "merge" it back into a single section.
+	//
+	// Type and Class are 2 bytes each.
+	r.Type = Type(uint16(msg[off])<<8 | uint16(msg[off+1]))
+	r.Class = Class(uint16(msg[off+2])<<8 | uint16(msg[off+3]))
+
+	// TTL consists of 4 bytes.
+	ttl1 := uint16(msg[off+4])<<8 | uint16(msg[off+5])
+	ttl2 := uint16(msg[off+6])<<8 | uint16(msg[off+7])
+	r.TTL = uint32(ttl1)<<16 | uint32(ttl2)
+
+	// RDLength consists of 2 bytes.
+	r.RDLength = uint16(msg[off+8])<<8 | uint16(msg[off+9])
+
+	// RData consists of the remaining RDLength bytes.
+	start := off + 10
+	end := start + int(r.RDLength)
+	r.RData = msg[start:end]
+
+	return len(msg), nil
 }
