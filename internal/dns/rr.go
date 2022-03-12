@@ -1,6 +1,8 @@
 package dns
 
-import "strings"
+import (
+	"net"
+)
 
 // Type represents a DNS resource record type.
 //
@@ -116,26 +118,22 @@ type RR struct {
 	// RData describes the resource itself, where the format of this information
 	// varies depending on the TYPE and CLASS of the resource record.
 	RData []byte
+
+	// RDataParsed is a custom field that holds the parsed RData value.
+	// Depending on the RR Type, RData may or may not hold a domain name. When
+	// RData holds a domain, it can be compressed.
+	RDataParsed string
 }
 
 // Unpack unpacks the DNS message resource record bytes (big-endian; network
 // order). It returns either the unpacked byte count or an error.
-func (r *RR) Unpack(msg []byte) (int, error) {
-	off := 0
+func (r *RR) Unpack(msg []byte, off int) (int, error) {
+	bytesRead := 0
 
-	// To unpack Name, read the domain name labels one by one.
-	labels := []string{}
-	for {
-		lsize, label, offn := unpackNameLabel(msg, off)
-		if lsize == 0 {
-			// A zero length byte indicates we're done parsing labels.
-			off += 1
-			break
-		}
-		labels = append(labels, label)
-		off = offn
-	}
-	r.Name = strings.Join(labels, ".")
+	name, offn, n := unpackDomainName(msg, off)
+	r.Name = name
+	off = offn
+	bytesRead += n
 
 	// The remaining bytes contain the remaining sections; left-shift the first
 	// byte to the "left most" position, and OR it with the remaining byte(s) to
@@ -144,19 +142,64 @@ func (r *RR) Unpack(msg []byte) (int, error) {
 	// Type and Class are 2 bytes each.
 	r.Type = Type(uint16(msg[off])<<8 | uint16(msg[off+1]))
 	r.Class = Class(uint16(msg[off+2])<<8 | uint16(msg[off+3]))
+	bytesRead += 4
 
 	// TTL consists of 4 bytes.
-	ttl1 := uint16(msg[off+4])<<8 | uint16(msg[off+5])
-	ttl2 := uint16(msg[off+6])<<8 | uint16(msg[off+7])
-	r.TTL = uint32(ttl1)<<16 | uint32(ttl2)
+	r.TTL = uint32(msg[off+4])<<24 |
+		uint32(msg[off+5])<<16 |
+		uint32(msg[off+6])<<8 |
+		uint32(msg[off+7])
+	bytesRead += 4
 
 	// RDLength consists of 2 bytes.
 	r.RDLength = uint16(msg[off+8])<<8 | uint16(msg[off+9])
+	bytesRead += 2
 
 	// RData consists of the remaining RDLength bytes.
+	// TYPE + CLASS + TTL + RDLENGTH = 10 bytes.
 	start := off + 10
-	end := start + int(r.RDLength)
+	size := int(r.RDLength)
+	end := start + size
 	r.RData = msg[start:end]
+	bytesRead += size
 
-	return len(msg), nil
+	// Depending on the RR Type, RData has to be unpacked differently.
+	switch r.Type {
+	// RDATA will contain a 32 bit IP address; needs no additional processing.
+	//
+	// https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1
+	case TypeA:
+		ip := append(net.IP{}, r.RData...)
+		r.RDataParsed = ip.String()
+
+	// TODO: TypeAAAA
+	//
+	// See: https://datatracker.ietf.org/doc/html/rfc3596
+
+	// RDATA will contain a domain name which specifies the canonical or primary
+	// name for the owner. The owner name is an alias.
+	//
+	// See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.1
+	case TypeCNAME:
+		name, _, _ := unpackDomainName(msg, start)
+		r.RDataParsed = name
+
+	// RDATA will contain a domain name (NSDNAME) which specifies a host which
+	// should be authoritative for the specified class and domain.
+	//
+	// See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.11
+	case TypeNS:
+		name, _, _ := unpackDomainName(msg, start)
+		r.RDataParsed = name
+
+	// See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.13
+	case TypeSOA:
+		// TODO
+
+	// See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.14
+	case TypeTXT:
+		// TODO
+	}
+
+	return bytesRead, nil
 }

@@ -36,7 +36,7 @@ func (m *Msg) Pack() ([]byte, error) {
 
 	hBytes, err := m.Header.Pack()
 	if err != nil {
-		return nil, fmt.Errorf("failed to pack dns message header: %v", err)
+		return nil, fmt.Errorf("failed to pack header: %v", err)
 	}
 	err = binary.Write(buff, binary.BigEndian, hBytes)
 	if err != nil {
@@ -45,7 +45,7 @@ func (m *Msg) Pack() ([]byte, error) {
 
 	qBytes, err := m.Question.Pack()
 	if err != nil {
-		return nil, fmt.Errorf("failed to pack dns message question: %v", err)
+		return nil, fmt.Errorf("failed to pack question: %v", err)
 	}
 	err = binary.Write(buff, binary.BigEndian, qBytes)
 	if err != nil {
@@ -60,52 +60,46 @@ func (m *Msg) Pack() ([]byte, error) {
 func (m *Msg) Unpack(msg []byte) (int, error) {
 	off := 0
 
-	hBytesRead, err := m.Header.Unpack(msg[0:12])
+	n, err := m.Header.Unpack(msg[0:12])
 	if err != nil {
-		return off, fmt.Errorf("failed to unpack dns message header: %v", err)
+		return off, fmt.Errorf("failed to unpack header: %v", err)
 	}
-	off += hBytesRead
+	off += n
 
-	qBytesRead, err := m.Question.Unpack(msg[off:])
+	n, err = m.Question.Unpack(msg, off)
 	if err != nil {
-		return off, fmt.Errorf("failed to unpack dns message question: %v", err)
+		return off, fmt.Errorf("failed to unpack question: %v", err)
 	}
-	off += qBytesRead
+	off += n
 
 	for i := 0; i < int(m.Header.ANCount); i++ {
 		an := RR{}
-		anBytesRead, err := an.Unpack(msg[off:])
+		n, err := an.Unpack(msg, off)
 		if err != nil {
-			return off, fmt.Errorf(
-				"failed to unpack dns message answer (%v): %v", i, err,
-			)
+			return off, fmt.Errorf("failed to unpack answer (%v): %v", i, err)
 		}
 		m.Answer = append(m.Answer, an)
-		off += anBytesRead
+		off += n
 	}
 
 	for i := 0; i < int(m.Header.NSCount); i++ {
 		ns := RR{}
-		nsBytesRead, err := ns.Unpack(msg[off:])
+		n, err := ns.Unpack(msg, off)
 		if err != nil {
-			return off, fmt.Errorf(
-				"failed to unpack dns message authority (%v): %v", i, err,
-			)
+			return off, fmt.Errorf("failed to unpack  authority (%v): %v", i, err)
 		}
 		m.Authority = append(m.Authority, ns)
-		off += nsBytesRead
+		off += n
 	}
 
 	for i := 0; i < int(m.Header.ARCount); i++ {
 		ar := RR{}
-		arBytesRead, err := ar.Unpack(msg[off:])
+		n, err := ar.Unpack(msg, off)
 		if err != nil {
-			return off, fmt.Errorf(
-				"failed to unpack dns message additional (%v): %v", i, err,
-			)
+			return off, fmt.Errorf("failed to unpack additional (%v): %v", i, err)
 		}
 		m.Additional = append(m.Additional, ar)
-		off += arBytesRead
+		off += n
 	}
 
 	return off, nil

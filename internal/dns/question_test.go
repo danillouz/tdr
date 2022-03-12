@@ -15,7 +15,7 @@ func TestQuestionPackUnpack(t *testing.T) {
 	}
 
 	q := new(Question)
-	lenb, err := q.Unpack(b)
+	lenb, err := q.Unpack(b, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,9 +23,10 @@ func TestQuestionPackUnpack(t *testing.T) {
 		t.Errorf("unpacked bytes length error: got %v - want %v", lenb, len(b))
 	}
 
-	if q.QName != msg.QName {
+	if q.QName != msg.QName+"." {
 		t.Errorf(
-			"unpacked question QName error: got %v - want %v", q.QName, msg.QName,
+			"unpacked question QName error: got %v - want %v",
+			q.QName, msg.QName+".",
 		)
 	}
 	if q.QType != msg.QType {

@@ -27,12 +27,9 @@ func queryByteMask(n int) byte {
 	return (1 << n) - 1
 }
 
-// unpackDomainNameLabel unpacks a domain name 1 label at a time. It returns
-// the label size in bytes, the label, and the next offset (to read the next
-// label).
-//
-// Because domain names can be compressed, we first check if a label is a
-// pointer.
+// unpackDomainName unpacks a domain name 1 label at a time, and follows any
+// pointer(s) when the domain name is compressed. It returns the unpacked
+// domain name, the next offset, and the amount of bytes read.
 //
 // When compressed, the label(s) of the domain name are replaced with a
 // pointer to a prior occurance. The pointer consists of 2 bytes and has the
@@ -45,13 +42,14 @@ func queryByteMask(n int) byte {
 //
 // The first 2 bits are always set to 1. And OFFSET specifies the offset from
 // the _start_ of the message (i.e. `Msg.Header.ID`) where the label can be
-// found; each label will start with a length byte, followed by the actual
-// label byte(s).
+// found; each label (after following the pointer) always start with a length
+// byte (i.e. label size), followed by the "actual" label byte(s).
 //
 // This means that a domain name in a message can be either:
 // - A sequence of labels ending in a zero byte.
-// - A pointer.
-// - A sequence of labels ending with a pointer.
+// - A pointer (that points to a sequence of labels ending in a zero byte).
+// - A sequence of labels ending with a pointer (that points to a sequence of
+//   labels ending in a zero byte).
 //
 // For example, the domain names `dan.co` and `hey.dan.co` can be
 // compressed like:
@@ -76,55 +74,64 @@ func queryByteMask(n int) byte {
 // 44 | 1  1|        20 (offset pointer)              |
 //    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 // ..
-//    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-// 64 | 1  1|        24 (offset pointer)              |
-//    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-// ..
-//    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-// 92 |    0 (root domain     |                       |
-//    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //
 // See: https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.4
-func unpackNameLabel(msg []byte, off int) (lsize int, label string, offn int) {
-	// Because a pointer starts with 2 bits set to 1, right-shifting them to the
-	// "right most" position results in 2^1 + 2^0 = 3.
-	isPointer := (msg[off] >> 6) == 3
-	offp := 0
+func unpackDomainName(msg []byte, off int) (string, int, int) {
+	nameb := []byte{}
 
-	if isPointer {
-		// To get the offset pointer value, query the 6 "right most" bits of the
-		// first pointer byte, and "merge" it with the second pointer byte; a
-		// pointer always consists of 2 bytes.
-		p := uint16(msg[off]&queryByteMask(6)) | uint16(msg[off]+1)
-		offp = int(p)
+	// The number of pointers followed.
+	ptrn := 0
 
-		// Follow the offset pointer to get the length byte of the label.
-		lsize = int(msg[offp])
-	} else {
-		// When the label is not compressed, the first byte in the sequence will
-		// always be the length byte.
-		lsize = int(msg[off])
+	// The current offset of a label.
+	offl := off
+
+	for {
+		// The current byte. Can be either:
+		// - A pointer; in this case the second byte (i.e. `cb` + 1) points to the
+		//   length byte.
+		// - Not a pointer; in this case the current byte _is_ the length byte.
+		cb := msg[offl]
+
+		// Because a pointer starts with its 2 most significant bits set to 1,
+		// right-shifting them to the "right most" position results in
+		// 2^1 + 2^0 = 3.
+		isPointer := (cb >> 6) == 3
+		if isPointer {
+			// To get the offset pointer value, "query" the 6 "right most" bits of the
+			// first pointer byte, and "merge" it with the second pointer byte; a
+			// pointer always consists of 2 bytes.
+			p := uint16(cb&queryByteMask(6)) | uint16(msg[offl+1])
+			offp := int(p)
+			offl = offp
+			ptrn++
+			continue
+		}
+
+		size := int(cb)
+
+		// The next byte always starts after the length byte.
+		offl += 1
+
+		if size == 0 {
+			break
+		}
+
+		end := offl + size
+		nameb = append(nameb, msg[offl:end]...)
+		nameb = append(nameb, '.')
+		offl = end
 	}
 
-	start := 0
+	name := string(nameb)
+	offn := offl
+	bytesRead := offl - off
 
-	// The label byte(s) start after the length byte.
-	if isPointer {
-		start = offp + 1
-	} else {
-		start = off + 1
-	}
-
-	end := start + lsize
-
-	label = string(msg[start:end])
-
-	if isPointer {
+	if ptrn > 0 {
 		// A pointer always consists of 2 bytes.
-		offn = 2
-	} else {
-		offn = end
+		psize := 2
+		offn = off + psize
+		bytesRead = psize
 	}
 
-	return
+	return name, offn, bytesRead
 }

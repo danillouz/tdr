@@ -92,29 +92,21 @@ func (q *Question) Pack() ([]byte, error) {
 
 // Unpack unpacks the DNS message question bytes (big-endian; network order).
 // It returns either the unpacked byte count or an error.
-func (q *Question) Unpack(msg []byte) (int, error) {
-	off := 0
+func (q *Question) Unpack(msg []byte, off int) (int, error) {
+	bytesRead := 0
 
-	// To unpack QName, read the domain name labels one by one.
-	labels := []string{}
-	for {
-		lsize, label, offn := unpackNameLabel(msg, off)
-		if lsize == 0 {
-			// A zero length byte indicates we're done parsing labels.
-			off += 1
-			break
-		}
-		labels = append(labels, label)
-		off = offn
-	}
-	q.QName = strings.Join(labels, ".")
+	name, offn, n := unpackDomainName(msg, off)
+	q.QName = name
+	off = offn
+	bytesRead += n
 
-	// The QType and QClass are 2 sections of 16 bits each in the message.
+	// The QType and QClass are 2 sections of 2 bytes each.
 	// To unpack each (remaining) section, left-shift the first byte to the "left
 	// most" position, and OR it with the second byte to "merge" it back into a
-	// single section of 16 bits.
+	// single section of 2 bytes.
 	q.QType = QType(uint16(msg[off])<<8 | uint16(msg[off+1]))
 	q.QClass = QClass(uint16(msg[off+2])<<8 | uint16(msg[off+3]))
+	bytesRead += 4
 
-	return len(msg), nil
+	return bytesRead, nil
 }

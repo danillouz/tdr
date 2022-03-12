@@ -215,5 +215,5 @@ func (h *Header) Unpack(msg []byte) (int, error) {
 	h.NSCount = uint16(msg[8])<<8 | uint16(msg[9])
 	h.ARCount = uint16(msg[10])<<8 | uint16(msg[11])
 
-	return len(msg), nil
+	return 12, nil
 }

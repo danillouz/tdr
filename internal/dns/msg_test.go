@@ -38,10 +38,10 @@ func TestMsgPackUnpack(t *testing.T) {
 		)
 	}
 
-	if m.Question.QName != msg.Question.QName {
+	if m.Question.QName != msg.Question.QName+"." {
 		t.Errorf(
 			"unpacked message question QName error: got %v - want %v",
-			m.Question.QName, msg.Question.QName,
+			m.Question.QName, msg.Question.QName+".",
 		)
 	}
 	if m.Question.QType != msg.Question.QType {
