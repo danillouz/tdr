@@ -4,7 +4,7 @@ import "testing"
 
 func TestQuestionPackUnpack(t *testing.T) {
 	msg := Question{
-		QName:  "danillouz.dev",
+		QName:  "danillouz.dev.",
 		QType:  TypeA,
 		QClass: ClassIN,
 	}
@@ -23,10 +23,10 @@ func TestQuestionPackUnpack(t *testing.T) {
 		t.Errorf("unpacked bytes length error: got %v - want %v", lenb, len(b))
 	}
 
-	if q.QName != msg.QName+"." {
+	if q.QName != msg.QName {
 		t.Errorf(
 			"unpacked question QName error: got %v - want %v",
-			q.QName, msg.QName+".",
+			q.QName, msg.QName,
 		)
 	}
 	if q.QType != msg.QType {

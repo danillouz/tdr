@@ -125,8 +125,7 @@ func (h *Header) Pack() ([]byte, error) {
 	buff := new(bytes.Buffer)
 
 	// First section: the ID is 16 bits, so just write it to the buffer.
-	err := binary.Write(buff, binary.BigEndian, h.ID)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, h.ID); err != nil {
 		return nil, err
 	}
 
@@ -145,27 +144,22 @@ func (h *Header) Pack() ([]byte, error) {
 	s |= uint16(h.RD) << 8
 	s |= uint16(h.RA) << 7
 	s |= uint16(h.RCode) << 0
-	err = binary.Write(buff, binary.BigEndian, s)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, s); err != nil {
 		return nil, err
 	}
 
 	// Remaining sections: these take up 16 bits each, so just write them to the
 	// buffer.
-	err = binary.Write(buff, binary.BigEndian, h.QDCount)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, h.QDCount); err != nil {
 		return nil, err
 	}
-	err = binary.Write(buff, binary.BigEndian, h.ANCount)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, h.ANCount); err != nil {
 		return nil, err
 	}
-	err = binary.Write(buff, binary.BigEndian, h.NSCount)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, h.NSCount); err != nil {
 		return nil, err
 	}
-	err = binary.Write(buff, binary.BigEndian, h.ARCount)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, h.ARCount); err != nil {
 		return nil, err
 	}
 

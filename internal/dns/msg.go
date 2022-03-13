@@ -38,8 +38,7 @@ func (m *Msg) Pack() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack header: %v", err)
 	}
-	err = binary.Write(buff, binary.BigEndian, hBytes)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, hBytes); err != nil {
 		return nil, err
 	}
 
@@ -47,8 +46,7 @@ func (m *Msg) Pack() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack question: %v", err)
 	}
-	err = binary.Write(buff, binary.BigEndian, qBytes)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, qBytes); err != nil {
 		return nil, err
 	}
 

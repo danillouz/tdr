@@ -59,31 +59,32 @@ func (q *Question) Pack() ([]byte, error) {
 	// To pack QName, process the domain name as a sequence of labels.
 	labels := strings.Split(q.QName, ".")
 	for _, label := range labels {
+		// Root label "." is split as an empty string.
+		if label == "" {
+			break
+		}
+
 		// Each label must be encoded into:
 		//  - A length byte; contains the length of the label (in bytes)
 		//  - The label byte(s) itself
-		err := binary.Write(buff, binary.BigEndian, byte(len(label)))
-		if err != nil {
+		if err := binary.Write(buff, binary.BigEndian, byte(len(label))); err != nil {
 			return nil, err
 		}
-		err = binary.Write(buff, binary.BigEndian, []byte(label))
-		if err != nil {
+		if err := binary.Write(buff, binary.BigEndian, []byte(label)); err != nil {
 			return nil, err
 		}
 	}
+
 	// A domain name terminates with the zero length byte (null label of root).
-	err := binary.Write(buff, binary.BigEndian, byte(0))
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, byte(0)); err != nil {
 		return nil, err
 	}
 
 	// Pack the remaining fields.
-	err = binary.Write(buff, binary.BigEndian, q.QType)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, q.QType); err != nil {
 		return nil, err
 	}
-	err = binary.Write(buff, binary.BigEndian, q.QClass)
-	if err != nil {
+	if err := binary.Write(buff, binary.BigEndian, q.QClass); err != nil {
 		return nil, err
 	}
 
