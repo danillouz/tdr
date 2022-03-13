@@ -25,7 +25,7 @@ func TestHeaderPackUnpack(t *testing.T) {
 	}
 
 	h := new(Header)
-	lenb, err := h.Unpack(b)
+	lenb, err := h.Unpack(b, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

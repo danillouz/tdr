@@ -49,7 +49,7 @@ const (
 // Header represents the DNS message header. It consists of 12 bytes with the
 // following format:
 //
-//   0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+//  15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
 // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 // |                      ID                       |
 // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -174,12 +174,15 @@ func (h *Header) Pack() ([]byte, error) {
 
 // Unpack unpacks the DNS message header field bytes (big-endian; network
 // order). It returns either the unpacked byte count or an error.
-func (h *Header) Unpack(msg []byte) (int, error) {
+func (h *Header) Unpack(msg []byte, off int) (int, error) {
+	bytesRead := 0
+
 	// The first 2 bytes contain the first section; ID.
 	//
 	// Left-shift the first byte to the "left most" position, and OR it with the
 	// second byte to "merge" it back into a single section of 16 bits.
-	h.ID = uint16(msg[0])<<8 | uint16(msg[1])
+	h.ID = uint16(msg[off])<<8 | uint16(msg[off+1])
+	bytesRead += 2
 
 	// The 3rd and 4th bytes contain the second section.
 	//
@@ -194,13 +197,14 @@ func (h *Header) Unpack(msg []byte) (int, error) {
 	// - Create a mask where all "left most" bits are "turned off", _except_ the
 	//   bit(s) in the queried bit field (i.e. mask the length of the bit field).
 	// - AND the header's shifted value with the mask to get the bit field value.
-	h.QR = msg[2] >> 7 & queryByteMask(1)
-	h.OpCode = OpCode(msg[2] >> 3 & queryByteMask(4))
-	h.AA = msg[2] >> 2 & queryByteMask(1)
-	h.TC = msg[2] >> 1 & queryByteMask(1)
-	h.RD = msg[2] >> 0 & queryByteMask(1)
-	h.RA = msg[3] >> 7 & queryByteMask(1)
-	h.RCode = RCode(msg[3] >> 0 & queryByteMask(4))
+	h.QR = msg[off+2] >> 7 & queryByteMask(1)
+	h.OpCode = OpCode(msg[off+2] >> 3 & queryByteMask(4))
+	h.AA = msg[off+2] >> 2 & queryByteMask(1)
+	h.TC = msg[off+2] >> 1 & queryByteMask(1)
+	h.RD = msg[off+2] >> 0 & queryByteMask(1)
+	h.RA = msg[off+3] >> 7 & queryByteMask(1)
+	h.RCode = RCode(msg[off+3] >> 0 & queryByteMask(4))
+	bytesRead += 2
 
 	// The remaining bytes contain the remaining sections:
 	// - The 5th and 6th bytes contain the third section; QDCOUNT.
@@ -210,10 +214,11 @@ func (h *Header) Unpack(msg []byte) (int, error) {
 	//
 	// Left-shift the first byte to the "left most" position, and OR it with the
 	// second byte to "merge" it back into a single section of 16 bits.
-	h.QDCount = uint16(msg[4])<<8 | uint16(msg[5])
-	h.ANCount = uint16(msg[6])<<8 | uint16(msg[7])
-	h.NSCount = uint16(msg[8])<<8 | uint16(msg[9])
-	h.ARCount = uint16(msg[10])<<8 | uint16(msg[11])
+	h.QDCount = uint16(msg[off+4])<<8 | uint16(msg[off+5])
+	h.ANCount = uint16(msg[off+6])<<8 | uint16(msg[off+7])
+	h.NSCount = uint16(msg[off+8])<<8 | uint16(msg[off+9])
+	h.ARCount = uint16(msg[off+10])<<8 | uint16(msg[off+11])
+	bytesRead += 8
 
-	return 12, nil
+	return bytesRead, nil
 }

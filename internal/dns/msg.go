@@ -60,7 +60,7 @@ func (m *Msg) Pack() ([]byte, error) {
 func (m *Msg) Unpack(msg []byte) (int, error) {
 	off := 0
 
-	n, err := m.Header.Unpack(msg[0:12])
+	n, err := m.Header.Unpack(msg, off)
 	if err != nil {
 		return off, fmt.Errorf("failed to unpack header: %v", err)
 	}
