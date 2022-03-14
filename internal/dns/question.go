@@ -3,6 +3,7 @@ package dns
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"strings"
 )
 
@@ -110,4 +111,14 @@ func (q *Question) Unpack(msg []byte, off int) (int, error) {
 	bytesRead += 4
 
 	return bytesRead, nil
+}
+
+// String returns a "dig like" string representation of the question.
+func (q *Question) String() string {
+	return fmt.Sprintf(
+		"%s\t%s\t%s",
+		q.QName,
+		ClassToString[q.QClass],
+		TypeToString[q.QType],
+	)
 }
