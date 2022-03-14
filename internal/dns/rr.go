@@ -1,10 +1,11 @@
 package dns
 
 import (
+	"fmt"
 	"net"
 )
 
-// Type represents a DNS resource record type.
+// Type represents a resource record type.
 //
 // See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
 type Type uint16
@@ -61,7 +62,27 @@ const (
 	TypeTXT
 )
 
-// Class represents a DNS resource record class.
+// TypeToString maps a resource record type to a string.
+var TypeToString = map[Type]string{
+	TypeA:     "A",
+	TypeNS:    "NS",
+	TypeMD:    "MD",
+	TypeMF:    "MF",
+	TypeCNAME: "CNAME",
+	TypeSOA:   "SOA",
+	TypeMB:    "MB",
+	TypeMG:    "MG",
+	TypeMR:    "MR",
+	TypeNULL:  "NULL",
+	TypeWKS:   "WKS",
+	TypePTR:   "PTR",
+	TypeHINFO: "HINFO",
+	TypeMINFO: "MINFO",
+	TypeMX:    "MX",
+	TypeTXT:   "TXT",
+}
+
+// Class represents a resource record class.
 //
 // See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.4
 type Class uint16
@@ -72,6 +93,11 @@ const (
 	// ClassIN stands for the internet.
 	ClassIN
 )
+
+// ClassToString maps a resource record type to a string.
+var ClassToString = map[Class]string{
+	ClassIN: "IN",
+}
 
 // RR represents a resource record. The message answer, authority, and
 // additional sections all share the same format: a variable number of resource
@@ -119,10 +145,10 @@ type RR struct {
 	// varies depending on the TYPE and CLASS of the resource record.
 	RData []byte
 
-	// RDataParsed is a custom field that holds the parsed RData value.
-	// Depending on the RR Type, RData may or may not hold a domain name. When
-	// RData holds a domain, it can be compressed.
-	RDataParsed string
+	// RDataUnpacked is a custom field that holds the unpacked RData.
+	// Depending on the Type, RData may or may not hold a domain name. And when
+	// RData holds a domain name, it can be compressed.
+	RDataUnpacked string
 }
 
 // Unpack unpacks the DNS message resource record bytes (big-endian; network
@@ -170,7 +196,7 @@ func (r *RR) Unpack(msg []byte, off int) (int, error) {
 	// https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1
 	case TypeA:
 		ip := append(net.IP{}, r.RData...)
-		r.RDataParsed = ip.String()
+		r.RDataUnpacked = ip.String()
 
 	// TODO: TypeAAAA
 	//
@@ -182,7 +208,7 @@ func (r *RR) Unpack(msg []byte, off int) (int, error) {
 	// See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.1
 	case TypeCNAME:
 		name, _, _ := unpackDomainName(msg, start)
-		r.RDataParsed = name
+		r.RDataUnpacked = name
 
 	// RDATA will contain a domain name (NSDNAME) which specifies a host which
 	// should be authoritative for the specified class and domain.
@@ -190,7 +216,7 @@ func (r *RR) Unpack(msg []byte, off int) (int, error) {
 	// See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.11
 	case TypeNS:
 		name, _, _ := unpackDomainName(msg, start)
-		r.RDataParsed = name
+		r.RDataUnpacked = name
 
 	// See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.13
 	case TypeSOA:
@@ -202,4 +228,16 @@ func (r *RR) Unpack(msg []byte, off int) (int, error) {
 	}
 
 	return bytesRead, nil
+}
+
+// String returns a "dig like" string representation of the resource.
+func (r *RR) String() string {
+	return fmt.Sprintf(
+		"%s\t%d\t%s\t%s\t%s",
+		r.Name,
+		r.TTL,
+		ClassToString[r.Class],
+		TypeToString[r.Type],
+		r.RDataUnpacked,
+	)
 }
