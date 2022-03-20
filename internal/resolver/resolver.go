@@ -37,7 +37,7 @@ func Resolve(name string, qt dns.QType) (string, error) {
 		}
 
 		// When there are no additional records, use the domain name of an
-		// authoritative name server to _recurively_ get an answer.
+		// authoritative name server to _recursively_ get an answer.
 		if name := getAuthority(msg); name != "" {
 			an, err := Resolve(name, dns.TypeA)
 			if err != nil {
