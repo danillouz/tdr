@@ -1,5 +1,16 @@
 package dns
 
+import (
+	"crypto/rand"
+	"encoding/binary"
+)
+
+// generateMsgID generates a random 16 bit DNS message ID.
+func generateMsgID() (id uint16, err error) {
+	err = binary.Read(rand.Reader, binary.BigEndian, &id)
+	return
+}
+
 // queryByteMask creates a mask where the "right most" n bits in a byte are
 // "turned on".
 //

@@ -30,6 +30,28 @@ type Msg struct {
 	Additional []RR
 }
 
+// SetQuery sets the required header- and question fields to send a DNS message
+// query.
+func (m *Msg) SetQuery(name string, t QType) error {
+	id, err := generateMsgID()
+	if err != nil {
+		return fmt.Errorf("failed to generate message ID: %v", err)
+	}
+
+	m.ID = id
+	m.QR = 0
+	m.OpCode = OpCodeQuery
+	m.RD = 1
+	m.QDCount = 1
+	m.Question = Question{
+		QName:  name,
+		QType:  t,
+		QClass: ClassIN,
+	}
+
+	return nil
+}
+
 // Pack packs the DNS message fields into binary format.
 func (m *Msg) Pack() ([]byte, error) {
 	buff := new(bytes.Buffer)

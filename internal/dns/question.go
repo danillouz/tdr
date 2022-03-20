@@ -19,8 +19,8 @@ type QType = Type
 // See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.5
 type QClass = Class
 
-// Question represents the question (i.e. query) to a name server. It has the
-// following format:
+// Question represents the DNS question (i.e. query) to a name server. It has
+// the following format:
 //
 //  15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
 // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
