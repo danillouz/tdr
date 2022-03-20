@@ -8,6 +8,11 @@ import (
 // OpCode represents a DNS operation code.
 type OpCode byte
 
+// String returns the string representation of an operation code.
+func (oc OpCode) String() string {
+	return OpCodeToString[oc]
+}
+
 const (
 	// OpCodeQuery is a standard query.
 	OpCodeQuery OpCode = iota
@@ -19,8 +24,20 @@ const (
 	OpCodeStatus
 )
 
+// OpCodeToString maps an operation code to a string.
+var OpCodeToString = map[OpCode]string{
+	OpCodeQuery:  "QUERY",
+	OpCodeIQuery: "IQUERY",
+	OpCodeStatus: "STATUS",
+}
+
 // RCode represents a DNS response code.
 type RCode byte
+
+// String returns the string representation of a response code.
+func (rc RCode) String() string {
+	return RCodeToString[rc]
+}
 
 const (
 	// RCodeNoError means there's no error condition.
@@ -45,6 +62,16 @@ const (
 	// operation.
 	RCodeRefused
 )
+
+// OpCodeToString maps a response code to a string.
+var RCodeToString = map[RCode]string{
+	RCodeNoError:        "No Error",
+	RCodeFormatError:    "Format Error",
+	RCodeServerFailure:  "Server Failure",
+	RCodeNameError:      "Name Error",
+	RCodeNotImplemented: "Not Implemented",
+	RCodeRefused:        "Refused",
+}
 
 // Header represents the DNS message header. It consists of 12 bytes with the
 // following format:
