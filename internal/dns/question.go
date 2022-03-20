@@ -117,8 +117,6 @@ func (q *Question) Unpack(msg []byte, off int) (int, error) {
 func (q *Question) String() string {
 	return fmt.Sprintf(
 		"%s\t%s\t%s",
-		q.QName,
-		ClassToString[q.QClass],
-		TypeToString[q.QType],
+		q.QName, q.QClass, q.QType,
 	)
 }

@@ -32,7 +32,7 @@ type Msg struct {
 
 // SetQuery sets the required header- and question fields to send a DNS message
 // query.
-func (m *Msg) SetQuery(name string, t QType) error {
+func (m *Msg) SetQuery(name string, qt QType) error {
 	id, err := generateMsgID()
 	if err != nil {
 		return fmt.Errorf("failed to generate message ID: %v", err)
@@ -45,7 +45,7 @@ func (m *Msg) SetQuery(name string, t QType) error {
 	m.QDCount = 1
 	m.Question = Question{
 		QName:  name,
-		QType:  t,
+		QType:  qt,
 		QClass: ClassIN,
 	}
 
