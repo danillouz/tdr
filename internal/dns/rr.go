@@ -10,6 +10,11 @@ import (
 // See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
 type Type uint16
 
+// String returns the string representation of a resource record type.
+func (t Type) String() string {
+	return TypeToString[t]
+}
+
 const (
 	TypeUnknown Type = iota
 
@@ -86,6 +91,11 @@ var TypeToString = map[Type]string{
 //
 // See: https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.4
 type Class uint16
+
+// String returns the string representation of a resource record class.
+func (c Class) String() string {
+	return ClassToString[c]
+}
 
 const (
 	ClassUnknown Class = iota
@@ -234,10 +244,6 @@ func (r *RR) Unpack(msg []byte, off int) (int, error) {
 func (r *RR) String() string {
 	return fmt.Sprintf(
 		"%s\t%d\t%s\t%s\t%s",
-		r.Name,
-		r.TTL,
-		ClassToString[r.Class],
-		TypeToString[r.Type],
-		r.RDataUnpacked,
+		r.Name, r.TTL, r.Class, r.Type, r.RDataUnpacked,
 	)
 }
