@@ -23,5 +23,5 @@ func main() {
 		)
 	}
 
-	fmt.Println(answer)
+	fmt.Println("answer:", answer)
 }

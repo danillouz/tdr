@@ -68,6 +68,8 @@ func getRootNameServer() net.IP {
 
 // lookup looks up the resource record(s) for the domain name.
 func lookup(server net.IP, name string, qt dns.QType) (*dns.Msg, error) {
+	fmt.Printf("looking up %q using name server %q\n", name, server)
+
 	addr := fmt.Sprintf("%s:53", server)
 	d := net.Dialer{
 		Timeout: time.Second * 5,
